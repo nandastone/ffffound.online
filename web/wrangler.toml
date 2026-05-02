@@ -1,0 +1,23 @@
+name = "ffffound"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+# D1: metadata store. Create with:
+#   wrangler d1 create ffffound
+# then paste the returned database_id here.
+[[d1_databases]]
+binding = "DB"
+database_name = "ffffound"
+database_id = "REPLACE_ME_AFTER_wrangler_d1_create"
+migrations_dir = "migrations"
+
+# R2: image bytes. Create with:
+#   wrangler r2 bucket create ffffound-images
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "ffffound-images"
+preview_bucket_name = "ffffound-images-preview"
+
+# Cache aggressively at the edge — every record is immutable.
+[vars]
+CACHE_MAX_AGE = "31536000"

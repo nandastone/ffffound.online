@@ -1,0 +1,22 @@
+{
+  "name": "ffffound-web",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:migrate:local": "wrangler d1 migrations apply ffffound --local",
+    "db:migrate:remote": "wrangler d1 migrations apply ffffound --remote",
+    "db:seed:local": "wrangler d1 execute ffffound --local --file=./seed/seed.sql",
+    "r2:seed:local": "node ./seed/seed-r2.mjs"
+  },
+  "dependencies": {
+    "hono": "^4.6.14"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250109.0",
+    "typescript": "^5.7.0",
+    "wrangler": "^3.99.0"
+  }
+}
