@@ -26,7 +26,7 @@ from tqdm import tqdm
 from warcio.archiveiterator import ArchiveIterator
 
 from .dispatch import classify_url, ParserContext
-from .handlers import image_page, user_page, tag_page, image_bytes
+from .handlers import image_page, user_page, image_bytes
 
 
 # Mapping is in dispatch.classify_url; this dict just routes the classified
@@ -34,7 +34,6 @@ from .handlers import image_page, user_page, tag_page, image_bytes
 HANDLERS = {
     "image_page":  image_page.handle,
     "user_page":   user_page.handle,
-    "tag_page":    tag_page.handle,
     "image_bytes": image_bytes.handle,
 }
 

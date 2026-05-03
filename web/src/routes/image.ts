@@ -3,6 +3,12 @@ import { html } from "hono/html";
 import type { Env, ImageRow } from "../types";
 import { Layout } from "../layout";
 
+interface RelatedRow {
+  image_id: string;
+  r2_key: string | null;
+  cdn_thumbnail_url: string | null;
+}
+
 export async function imageRoute(c: Context<{ Bindings: Env }>) {
   const id = c.req.param("id");
 
@@ -14,57 +20,80 @@ export async function imageRoute(c: Context<{ Bindings: Env }>) {
 
   if (!image) return c.notFound();
 
-  // Two follow-up queries in parallel — both are tiny and well-indexed.
-  const [tagsResult, saversResult] = await Promise.all([
-    c.env.DB.prepare(`SELECT tag FROM image_tags WHERE image_id = ? ORDER BY tag`)
-      .bind(id)
-      .all<{ tag: string }>(),
+  const [saversResult, relatedResult] = await Promise.all([
     c.env.DB.prepare(
-      `SELECT username FROM saves WHERE image_id = ? ORDER BY saved_at DESC LIMIT 50`
+      `SELECT username FROM saves WHERE image_id = ? ORDER BY saved_at ASC LIMIT 50`
     )
       .bind(id)
       .all<{ username: string }>(),
+    c.env.DB.prepare(
+      `SELECT i.image_id, i.r2_key, i.cdn_thumbnail_url
+       FROM image_related r
+       JOIN images i ON i.image_id = r.related_id
+       WHERE r.image_id = ?
+       ORDER BY r.position ASC
+       LIMIT 10`
+    )
+      .bind(id)
+      .all<RelatedRow>(),
   ]);
 
-  const tags = tagsResult.results.map((r) => r.tag);
   const savers = saversResult.results.map((r) => r.username);
+  const related = relatedResult.results;
 
   return c.html(
     Layout({
-      title: `image ${image.image_id}`,
+      title: image.title ?? `image ${image.image_id.slice(0, 8)}`,
       children: html`
         <article class="image-detail">
           <div>
             ${image.r2_key
-              ? html`<img src="/img/${image.r2_key}" alt="" />`
+              ? html`<img src="/img/${image.r2_key}" alt="${image.title ?? ""}" />`
               : html`<p style="opacity:0.5">image bytes not in archive</p>`}
+
+            ${image.title
+              ? html`<p style="margin-top:12px;font-size:13px;opacity:0.7"><span style="opacity:0.5">Quoted from:</span> <strong>${image.title}</strong></p>`
+              : ""}
           </div>
           <aside>
             <dl>
               <dt>uploader</dt>
-              <dd><a href="/user/${image.uploader}">${image.uploader}</a></dd>
+              <dd><a href="/home/${image.uploader}">${image.uploader}</a></dd>
 
               ${image.uploaded_at
-                ? html`<dt>uploaded</dt><dd>${formatDate(image.uploaded_at)}</dd>`
+                ? html`<dt>posted</dt><dd>${formatDate(image.uploaded_at)}</dd>`
                 : ""}
 
               <dt>source</dt>
               <dd>
                 ${image.source_url
-                  ? html`<a class="${image.source_dead ? "dead" : ""}" href="${image.source_url}" rel="noopener nofollow">${image.source_url}</a>`
+                  ? html`<a class="${image.source_dead ? "dead" : ""}" href="${image.source_url}" rel="noopener nofollow">${truncate(image.source_url, 60)}</a>`
                   : html`<span style="opacity:0.5">unknown</span>`}
               </dd>
 
-              ${tags.length
-                ? html`<dt>tags</dt><dd class="tags">${tags.map((t) => html`<a href="/tag/${encodeURIComponent(t)}">${t}</a>`)}</dd>`
-                : ""}
-
               ${savers.length
-                ? html`<dt>savers (${image.save_count})</dt><dd class="savers">${savers.map((u) => html`<a href="/user/${u}">${u}</a>`)}</dd>`
+                ? html`<dt>saved by ${image.save_count} ${image.save_count === 1 ? "person" : "people"}</dt><dd class="savers">${savers.map((u) => html`<a href="/home/${u}">${u}</a>`)}</dd>`
                 : ""}
             </dl>
           </aside>
         </article>
+
+        ${related.length
+          ? html`
+              <section class="related">
+                <h3>you may like these</h3>
+                <div class="related-grid">
+                  ${related.map(
+                    (r) => html`
+                      <a href="/image/${r.image_id}">
+                        <img loading="lazy" src="${r.r2_key ? `/img/${r.r2_key}` : r.cdn_thumbnail_url ?? ""}" alt="" />
+                      </a>
+                    `
+                  )}
+                </div>
+              </section>
+            `
+          : ""}
       `,
     })
   );
@@ -72,4 +101,8 @@ export async function imageRoute(c: Context<{ Bindings: Env }>) {
 
 function formatDate(epoch: number): string {
   return new Date(epoch * 1000).toISOString().slice(0, 10);
+}
+
+function truncate(s: string, n: number): string {
+  return s.length > n ? s.slice(0, n - 1) + "…" : s;
 }

@@ -1,8 +1,8 @@
 """
 Handler for /image/<sha1> pages.
 
-Extracts: image_id, source_url (deep link), title text, posted_at, savers list,
-related image ids (for future "more like this").
+Extracts: image_id, title (the "Quoted from:" page name), source_url (deep link),
+posted_at, savers list, and related_to edges.
 
 Selectors are real (Phase 0 spike confirmed against live captures).
 """
@@ -20,6 +20,7 @@ from ..dispatch import ParserContext, image_id_from_url, is_stub
 
 _RE_DATE = re.compile(r"posted on (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})")
 _RE_SAVER_HREF = re.compile(r"^/home/([^/]+)/found/?$", re.I)
+_RE_RELATED_HREF = re.compile(r"/image/([0-9a-f]{40})")
 
 
 def handle(ctx: ParserContext, *, url: str, content_type: str, record: Any) -> None:
@@ -35,18 +36,18 @@ def handle(ctx: ParserContext, *, url: str, content_type: str, record: Any) -> N
 
     asset = soup.select_one("blockquote.asset")
     if not asset:
-        return  # not the page shape we expect
+        return
 
     # ---- title (the "Quoted from:" link text) ------------------------------
     title_link = asset.select_one("div.title a[id$='-link']")
     title = title_link.get_text(strip=True) if title_link else None
 
-    # ---- source URL: prefer the deep image link, fall back to title link ----
+    # ---- source URL: prefer the deep image link, fall back to title link ---
     src_link = asset.select_one("a[id$='-link-img']") or title_link
     source_url = src_link.get("href") if src_link else None
 
-    # ---- main image src (so we can map cdn URL → image_id later) -----------
-    img_el = asset.select_one(f"img[id^='asset'][id$='-img']")
+    # ---- main image src ----------------------------------------------------
+    img_el = asset.select_one("img[id^='asset'][id$='-img']")
     cdn_thumbnail_url = img_el.get("src") if img_el else None
     width  = _maybe_int(img_el.get("width"))  if img_el else None
     height = _maybe_int(img_el.get("height")) if img_el else None
@@ -63,17 +64,30 @@ def handle(ctx: ParserContext, *, url: str, content_type: str, record: Any) -> N
             m = _RE_SAVER_HREF.match(a.get("href", ""))
             if m:
                 savers.append(m.group(1))
-
     save_count = _extract_save_count(saver_block)
+
+    # ---- "you may like these" related images -------------------------------
+    related_block = asset.select_one("div.related_to")
+    related_ids: list[str] = []
+    if related_block:
+        seen = set()
+        for a in related_block.select("a[href]"):
+            m = _RE_RELATED_HREF.search(a.get("href", ""))
+            if m:
+                rid = m.group(1).lower()
+                if rid != image_id and rid not in seen:
+                    seen.add(rid)
+                    related_ids.append(rid)
 
     # ---- DB upserts --------------------------------------------------------
     db = ctx.db
     db.execute(
         """INSERT INTO images
-             (image_id, uploader, source_url, cdn_thumbnail_url, width, height,
-              uploaded_at, save_count)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+             (image_id, uploader, title, source_url, cdn_thumbnail_url,
+              width, height, uploaded_at, save_count)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(image_id) DO UPDATE SET
+             title             = COALESCE(excluded.title,             images.title),
              source_url        = COALESCE(excluded.source_url,        images.source_url),
              cdn_thumbnail_url = COALESCE(excluded.cdn_thumbnail_url, images.cdn_thumbnail_url),
              width             = COALESCE(excluded.width,             images.width),
@@ -83,6 +97,7 @@ def handle(ctx: ParserContext, *, url: str, content_type: str, record: Any) -> N
         (
             image_id,
             savers[0] if savers else "_unknown",
+            title,
             source_url,
             cdn_thumbnail_url,
             width,
@@ -97,6 +112,20 @@ def handle(ctx: ParserContext, *, url: str, content_type: str, record: Any) -> N
         db.execute(
             "INSERT OR IGNORE INTO saves (image_id, username, saved_at) VALUES (?, ?, ?)",
             (image_id, u, None),
+        )
+
+    for pos, rid in enumerate(related_ids):
+        # Insert a placeholder image row for the related id if it's brand new,
+        # so the FK is happy (we'll fill in details when we encounter it).
+        db.execute(
+            "INSERT OR IGNORE INTO images (image_id, uploader) VALUES (?, '_unknown')",
+            (rid,),
+        )
+        db.execute(
+            """INSERT INTO image_related (image_id, related_id, position)
+               VALUES (?, ?, ?)
+               ON CONFLICT(image_id, related_id) DO UPDATE SET position = excluded.position""",
+            (image_id, rid, pos),
         )
 
 

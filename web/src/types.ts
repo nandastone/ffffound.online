@@ -17,6 +17,7 @@ export interface UserRow {
 export interface ImageRow {
   image_id: string;
   uploader: string;
+  title: string | null;
   source_url: string | null;
   source_dead: number;
   cdn_thumbnail_url: string | null;
@@ -24,11 +25,5 @@ export interface ImageRow {
   width: number | null;
   height: number | null;
   uploaded_at: number | null;
-  comment_count: number;
   save_count: number;
-}
-
-export interface ImageWithTags extends ImageRow {
-  tags: string[];
-  savers: string[];
 }

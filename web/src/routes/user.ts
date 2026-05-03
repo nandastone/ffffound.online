@@ -14,10 +14,8 @@ export async function userRoute(c: Context<{ Bindings: Env }>) {
 
   if (!user) return c.notFound();
 
-  // Show their saves (the ffffound primitive). Uploaded images come along
-  // implicitly because uploading also auto-saved on the original site.
   const { results } = await c.env.DB.prepare(
-    `SELECT i.image_id, i.uploader, i.r2_key, i.cdn_thumbnail_url
+    `SELECT i.image_id, i.uploader, i.title, i.r2_key, i.cdn_thumbnail_url
      FROM saves s
      JOIN images i ON i.image_id = s.image_id
      WHERE s.username = ?
@@ -25,7 +23,7 @@ export async function userRoute(c: Context<{ Bindings: Env }>) {
      LIMIT 120`
   )
     .bind(username)
-    .all<Pick<ImageRow, "image_id" | "uploader" | "r2_key" | "cdn_thumbnail_url">>();
+    .all<Pick<ImageRow, "image_id" | "uploader" | "title" | "r2_key" | "cdn_thumbnail_url">>();
 
   return c.html(
     Layout({
@@ -33,10 +31,7 @@ export async function userRoute(c: Context<{ Bindings: Env }>) {
       children: html`
         <header style="margin-bottom:16px">
           <h2 style="margin:0">${user.display_name ?? user.username}</h2>
-          <p class="meta">
-            @${user.username} · ${user.save_count} saves
-            ${user.joined_at ? html` · joined ${new Date(user.joined_at * 1000).toISOString().slice(0, 7)}` : ""}
-          </p>
+          <p class="meta">@${user.username} · ${user.save_count} saves</p>
           ${user.bio ? html`<p style="max-width:60ch">${user.bio}</p>` : ""}
         </header>
         <div class="grid">
@@ -44,7 +39,7 @@ export async function userRoute(c: Context<{ Bindings: Env }>) {
             (row) => html`
               <figure>
                 <a href="/image/${row.image_id}">
-                  <img loading="lazy" src="${row.r2_key ? `/img/${row.r2_key}` : row.cdn_thumbnail_url ?? ""}" alt="" />
+                  <img loading="lazy" src="${row.r2_key ? `/img/${row.r2_key}` : row.cdn_thumbnail_url ?? ""}" alt="${row.title ?? ""}" />
                 </a>
               </figure>
             `

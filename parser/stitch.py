@@ -71,6 +71,9 @@ def main() -> int:
     n_variants = db.execute("SELECT COUNT(*) FROM image_best_variant").fetchone()[0]
     print(f"  {n_variants:,} unique image hashes with at least one byte payload")
 
+    # Index on the join key — without this, the UPDATE below is O(N*M).
+    db.execute("CREATE INDEX IF NOT EXISTS idx_image_best_variant_sha1 ON image_best_variant(sha1)")
+
     print("\nApplying r2_key to images...")
     cur = db.execute(
         """UPDATE images

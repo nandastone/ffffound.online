@@ -2,6 +2,7 @@ import { html } from "hono/html";
 
 // Minimal shared layout. Brutalist on purpose — the data is the design.
 // Inline CSS keeps the Worker single-file and avoids a static asset deploy.
+// (Optional follow-up: swap for the original ffffound CSS captured in the WARC.)
 export function Layout(props: { title: string; children: unknown }) {
   return html`<!doctype html>
 <html lang="en">
@@ -30,11 +31,6 @@ export function Layout(props: { title: string; children: unknown }) {
       }
       header h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: 0.02em; }
       header nav { display: flex; gap: 12px; font-size: 13px; }
-      header form { margin-left: auto; }
-      header input[type=search] {
-        font: inherit; padding: 4px 8px; min-width: 220px;
-        border: 1px solid rgba(127,127,127,0.4); border-radius: 3px; background: transparent; color: inherit;
-      }
       main { padding: 20px; max-width: 1280px; margin: 0 auto; }
       a { color: inherit; text-decoration: none; border-bottom: 1px solid rgba(127,127,127,0.4); }
       a:hover { border-bottom-color: currentColor; }
@@ -47,7 +43,11 @@ export function Layout(props: { title: string; children: unknown }) {
       .image-detail dl { margin: 0; }
       .image-detail dt { font-weight: 600; opacity: 0.6; margin-top: 12px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
       .image-detail dd { margin: 4px 0 0; }
-      .tags a, .savers a { display: inline-block; margin: 2px 4px 2px 0; padding: 2px 6px; border: 1px solid rgba(127,127,127,0.3); border-radius: 3px; }
+      .savers a { display: inline-block; margin: 2px 4px 2px 0; padding: 2px 6px; border: 1px solid rgba(127,127,127,0.3); border-radius: 3px; }
+      .related { margin-top: 24px; }
+      .related h3 { font-size: 12px; text-transform: uppercase; opacity: 0.5; letter-spacing: 0.06em; margin: 0 0 8px; }
+      .related-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+      .related-grid img { width: 100%; height: 150px; object-fit: cover; display: block; background: #ddd; }
       .dead { opacity: 0.5; text-decoration: line-through; }
       footer { padding: 24px 20px; font-size: 11px; opacity: 0.5; text-align: center; }
     </style>
@@ -56,12 +56,8 @@ export function Layout(props: { title: string; children: unknown }) {
     <header>
       <h1><a href="/" style="border:none">ffffound</a></h1>
       <nav>
-        <a href="/">recent</a>
-        <a href="/random">random</a>
+        <a href="/">top</a>
       </nav>
-      <form action="/search" method="get">
-        <input type="search" name="q" placeholder="search…" />
-      </form>
     </header>
     <main>${props.children}</main>
     <footer>preserved from the 2017 ArchiveTeam capture · read-only</footer>

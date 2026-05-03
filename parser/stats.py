@@ -51,7 +51,7 @@ def main() -> int:
         from datetime import datetime, timezone
         lo = datetime.fromtimestamp(row[0], tz=timezone.utc).strftime("%Y-%m-%d")
         hi = datetime.fromtimestamp(row[1], tz=timezone.utc).strftime("%Y-%m-%d")
-        print(f"  {lo} → {hi}")
+        print(f"  {lo} -> {hi}")
 
     section("Top users by save count (from saves table)")
     rows = db.execute(

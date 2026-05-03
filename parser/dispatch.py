@@ -37,7 +37,6 @@ _SHA1 = r"[0-9a-f]{40}"
 
 _RE_IMAGE_PAGE = re.compile(rf"^https?://(?:www\.)?ffffound\.com/image/({_SHA1})", re.I)
 _RE_USER_PAGE  = re.compile(r"^https?://(?:www\.)?ffffound\.com/home/([^/?#]+)", re.I)
-_RE_TAG_PAGE   = re.compile(r"^https?://(?:www\.)?ffffound\.com/tagged/([^/?#]+)", re.I)
 _RE_OUTBOUND   = re.compile(r"^https?://(?:www\.)?ffffound\.com/outbound/", re.I)
 
 _RE_IMAGE_CDN  = re.compile(
@@ -47,7 +46,7 @@ _RE_IMAGE_CDN  = re.compile(
 
 
 def classify_url(url: str, content_type: str = "") -> Optional[str]:
-    """Return one of {'image_page','user_page','tag_page','image_bytes'} or None."""
+    """Return one of {'image_page','user_page','image_bytes'} or None."""
     if _RE_OUTBOUND.match(url):
         return None  # ffffound's link redirector — useless
     if _RE_IMAGE_CDN.match(url):
@@ -58,8 +57,6 @@ def classify_url(url: str, content_type: str = "") -> Optional[str]:
         return "image_page"
     if _RE_USER_PAGE.match(url):
         return "user_page"
-    if _RE_TAG_PAGE.match(url):
-        return "tag_page"
     return None
 
 
@@ -70,11 +67,6 @@ def image_id_from_url(url: str) -> Optional[str]:
 
 def username_from_url(url: str) -> Optional[str]:
     m = _RE_USER_PAGE.match(url)
-    return m.group(1) if m else None
-
-
-def tag_from_url(url: str) -> Optional[str]:
-    m = _RE_TAG_PAGE.match(url)
     return m.group(1) if m else None
 
 
