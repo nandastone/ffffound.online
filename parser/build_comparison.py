@@ -73,22 +73,35 @@ def main() -> int:
     out_html.write_bytes(rewritten)
     print(f"wrote {out_html}  ({len(rewritten)} bytes)  source URL: {url}")
 
-    # Tiny index.
+    # Full-width 50/50 split for side-by-side review.
     (args.out / "index.html").write_text(f"""<!doctype html>
 <html><head><title>ffffound recreation comparison</title>
-<style>body{{font:14px sans-serif;margin:20px;max-width:900px}}
-.col{{display:inline-block;vertical-align:top;width:48%;margin-right:1%}}
-iframe{{width:100%;height:80vh;border:1px solid #ccc}}</style></head>
+<style>
+  *{{box-sizing:border-box}}
+  html,body{{height:100%;margin:0}}
+  body{{font:13px -apple-system,Segoe UI,sans-serif;display:flex;flex-direction:column}}
+  header{{padding:8px 16px;border-bottom:1px solid #ddd;flex:0 0 auto}}
+  header h1{{margin:0;font-size:14px;font-weight:600}}
+  header code{{font-size:12px;opacity:0.7}}
+  .panes{{flex:1 1 auto;display:flex}}
+  .pane{{flex:1 1 50%;display:flex;flex-direction:column;min-width:0}}
+  .pane:first-child{{border-right:1px solid #ddd}}
+  .pane h3{{margin:0;padding:6px 12px;font-size:12px;text-transform:uppercase;opacity:0.6;letter-spacing:0.05em;border-bottom:1px solid #eee}}
+  .pane iframe{{flex:1 1 auto;width:100%;border:0;display:block}}
+</style></head>
 <body>
-<h1>ffffound — original vs. recreation</h1>
-<p>image: <code>{args.image_id}</code></p>
-<div class="col">
-  <h3>captured original (with original CSS/JS)</h3>
-  <iframe src="original-{args.image_id[:8]}.html"></iframe>
-</div>
-<div class="col">
-  <h3>our recreation</h3>
-  <iframe src="http://localhost:8787/image/{args.image_id}"></iframe>
+<header>
+  <h1>ffffound — captured original (May 2017) vs. our recreation &nbsp;<code>{args.image_id}</code></h1>
+</header>
+<div class="panes">
+  <div class="pane">
+    <h3>captured original (WARC + original CSS/JS)</h3>
+    <iframe src="original-{args.image_id[:8]}.html"></iframe>
+  </div>
+  <div class="pane">
+    <h3>our recreation</h3>
+    <iframe src="http://localhost:8787/image/{args.image_id}"></iframe>
+  </div>
 </div>
 </body></html>""", encoding="utf-8")
     print(f"wrote {args.out / 'index.html'}")

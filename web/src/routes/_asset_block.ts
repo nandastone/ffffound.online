@@ -32,6 +32,7 @@ export function renderListAsset(row: ImageRow, relatedThumbs: RelatedThumb[] = [
 ${row.r2_key
   ? html`<a id="${elId}-link-img" href="${detail}"><img id="${elId}-img" src="${imgSrc}" alt="${title}"${w ? html` width="${w}"` : ""}${h ? html` height="${h}"` : ""}></a>`
   : html`<p style="color:#909090">image bytes not in archive</p>`}
+<div class="button"><a class="link" style="text-decoration:line-through;">FLAG THIS IMAGE</a></div>
 </td>
 <td valign="top" class="${relatedThumbs.length ? "vline" : ""}">
 ${relatedThumbs.map((r) => html`<div class="related_to_item_xs"><a href="/image/${r.image_id}"><img src="${r.r2_key ? `/img/${r.r2_key}` : r.cdn_thumbnail_url ?? ""}" width="100"></a></div>`)}

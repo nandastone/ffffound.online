@@ -99,6 +99,7 @@ ${image.r2_key
   ? html`<a id="${assetEl}-link-img" href="${sourceUrl}" target="_blank" rel="noopener nofollow"><img id="${assetEl}-img" src="${imgSrc}" alt="${titleText}" ${image.width ? html` width="${Math.min(image.width, 520)}"` : ""}${image.height && image.width ? html` height="${Math.round(image.height * Math.min(image.width, 520) / image.width)}"` : ""}></a>`
   : html`<p style="color:#909090">image bytes not in archive</p>`}
 
+<div class="button"><a class="link" style="text-decoration:line-through;">FLAG THIS IMAGE</a></div>
 </td>
 <td valign="top" class=""></td>
 </tr></table>
