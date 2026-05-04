@@ -8,7 +8,7 @@ compatibility_date = "2025-01-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "ffffound"
-database_id = "REPLACE_ME_AFTER_wrangler_d1_create"
+database_id = "892346b1-0bdb-4661-8a20-bb21e8d01614"
 migrations_dir = "migrations"
 
 # R2: image bytes. Create with:
@@ -16,7 +16,12 @@ migrations_dir = "migrations"
 [[r2_buckets]]
 binding = "IMAGES"
 bucket_name = "ffffound-images"
-preview_bucket_name = "ffffound-images-preview"
+# (no preview_bucket_name → wrangler dev uses the same bucket name locally)
+
+# Static assets — original ffffound CSS / JS / logo extracted from the WARC.
+# Wrangler serves files in ./public at their literal path before invoking the Worker.
+[assets]
+directory = "./public"
 
 # Cache aggressively at the edge — every record is immutable.
 [vars]

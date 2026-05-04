@@ -87,6 +87,19 @@ def main() -> int:
     n_total      = db.execute("SELECT COUNT(*) FROM images").fetchone()[0]
     print(f"\n  {n_with_bytes:,} of {n_total:,} images have local bytes ({100*n_with_bytes/max(1,n_total):.1f}%)")
 
+    # Backfill users.save_count from the saves table — the parser's per-record
+    # path never wrote it (the value isn't on individual save events). One pass
+    # at the end is cheaper than maintaining a counter during ingest.
+    print("\nBackfilling users.save_count from saves table...")
+    db.execute(
+        """UPDATE users
+           SET save_count = (SELECT COUNT(*) FROM saves WHERE saves.username = users.username)"""
+    )
+    db.commit()
+    n_users_with_saves = db.execute("SELECT COUNT(*) FROM users WHERE save_count > 0").fetchone()[0]
+    n_users            = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+    print(f"  {n_users_with_saves:,} of {n_users:,} users have non-zero save_count")
+
     return 0
 
 

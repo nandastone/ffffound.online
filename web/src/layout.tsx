@@ -1,66 +1,87 @@
 import { html } from "hono/html";
 
-// Minimal shared layout. Brutalist on purpose — the data is the design.
-// Inline CSS keeps the Worker single-file and avoids a static asset deploy.
-// (Optional follow-up: swap for the original ffffound CSS captured in the WARC.)
-export function Layout(props: { title: string; children: unknown }) {
+// Faithful 2017 ffffound chrome. Markup mirrors the captured pages (table-based
+// layout, original class names) so the original `found-min.r3000.css` styles it
+// without modification. Layout structure:
+//
+//   row 1: 160-wide spacer cell + empty cell  (sets column widths)
+//   row 2: logo + "title"   (logo column 160px, title column flexible)
+//   row 3: 30-tall spacer
+//   row 4: sidebar menu + main content
+//
+// The sidebar / nav menu reproduces the captured menu items but with all the
+// signed-in / interactive ones either removed or stubbed (the site is read-only).
+export function Layout(props: { title: string; children: unknown; titleBlock?: unknown }) {
   return html`<!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>${props.title} — ffffound</title>
-    <link rel="icon" href="data:," />
-    <style>
-      :root { color-scheme: light dark; }
-      * { box-sizing: border-box; }
-      body {
-        font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-        margin: 0;
-        background: #fafafa;
-        color: #111;
-      }
-      @media (prefers-color-scheme: dark) {
-        body { background: #0e0e0e; color: #e8e8e8; }
-        a { color: #9cf; }
-      }
-      header {
-        padding: 12px 20px;
-        border-bottom: 1px solid rgba(127,127,127,0.2);
-        display: flex; gap: 16px; align-items: baseline;
-      }
-      header h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: 0.02em; }
-      header nav { display: flex; gap: 12px; font-size: 13px; }
-      main { padding: 20px; max-width: 1280px; margin: 0 auto; }
-      a { color: inherit; text-decoration: none; border-bottom: 1px solid rgba(127,127,127,0.4); }
-      a:hover { border-bottom-color: currentColor; }
-      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
-      .grid figure { margin: 0; }
-      .grid img { width: 100%; height: 220px; object-fit: cover; display: block; background: #ddd; }
-      .meta { font-size: 12px; opacity: 0.7; padding: 4px 0; }
-      .image-detail { display: grid; grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr); gap: 24px; }
-      .image-detail img { max-width: 100%; height: auto; display: block; }
-      .image-detail dl { margin: 0; }
-      .image-detail dt { font-weight: 600; opacity: 0.6; margin-top: 12px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
-      .image-detail dd { margin: 4px 0 0; }
-      .savers a { display: inline-block; margin: 2px 4px 2px 0; padding: 2px 6px; border: 1px solid rgba(127,127,127,0.3); border-radius: 3px; }
-      .related { margin-top: 24px; }
-      .related h3 { font-size: 12px; text-transform: uppercase; opacity: 0.5; letter-spacing: 0.06em; margin: 0 0 8px; }
-      .related-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
-      .related-grid img { width: 100%; height: 150px; object-fit: cover; display: block; background: #ddd; }
-      .dead { opacity: 0.5; text-decoration: line-through; }
-      footer { padding: 24px 20px; font-size: 11px; opacity: 0.5; text-align: center; }
-    </style>
-  </head>
-  <body>
-    <header>
-      <h1><a href="/" style="border:none">ffffound</a></h1>
-      <nav>
-        <a href="/">top</a>
-      </nav>
-    </header>
-    <main>${props.children}</main>
-    <footer>preserved from the 2017 ArchiveTeam capture · read-only</footer>
-  </body>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=890" />
+<title>${props.title} | FFFFOUND!</title>
+<link rel="shortcut icon" type="image/ico" href="/favicon.ico" />
+<link rel="stylesheet" type="text/css" href="/static/assets/found-min.r3000.css" />
+</head>
+<body>
+
+<div id="content">
+<table border="0" cellspacing="0" cellpadding="0" width="99%">
+
+<tr>
+  <td width="160"><img src="/static/assets/blank.r3000.gif" width="160" height="1" alt="" /></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td valign="top">
+    <div id="logo" class="content_block">
+      <a href="/"><img src="/static/assets/found_01.r3000.gif" width="131" height="158" alt="FFFFOUND!" /></a>
+    </div>
+  </td>
+  <td valign="top">
+    <div id="title">${props.titleBlock ?? ""}</div>
+  </td>
+</tr>
+
+<tr>
+  <td><img src="/static/assets/blank.r3000.gif" width="1" height="30" alt="" /></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td valign="top">
+    <div class="content_block">
+
+      <div id="menu-main">
+        <ul class="menu">
+          <li id="menu-top" style="margin-bottom:10px;"><a href="/">Top</a></li>
+          <li id="menu-about"><a href="/about">About</a></li>
+          <li id="menu-screensaver"><a href="/screensaver/">Screensaver</a></li>
+          <li id="menu-iphone"><a href="/iphone/">iPhone</a></li>
+        </ul>
+      </div>
+
+      <div id="menu-legal">
+        <ul class="submenu">
+          <li><a href="/legal#privacy_policy">Privacy Policy</a></li>
+          <li><a href="/legal#term_of_use">Terms of Service</a></li>
+        </ul>
+      </div>
+
+      <div id="menu-etc">
+        <ul class="submenu">
+          <li><a href="/log/">Change Log</a></li>
+        </ul>
+      </div>
+
+    </div>
+  </td>
+
+  <td valign="top">${props.children}</td>
+</tr>
+
+</table>
+</div>
+
+</body>
 </html>`;
 }
