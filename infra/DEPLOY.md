@@ -21,8 +21,12 @@ npx wrangler login
 # 2. Create the R2 bucket
 npx wrangler r2 bucket create ffffound-images
 
-# 3. Create the D1 database; copy the returned `database_id` into wrangler.toml
-npx wrangler d1 create ffffound
+# 3. Create the D1 database in us-west; copy the returned `database_id` into wrangler.toml.
+#    Region pinning matters: the very first attempt landed us in OC (Sydney) which
+#    went into datacenter maintenance the same day and took the site down for hours.
+#    Use --location to avoid Cloudflare picking the closest region (which may be
+#    smaller / less reliable).
+npx wrangler d1 create ffffound --location wnam   # us-west; alternatives: enam, weur, eeur, apac, oc
 
 # 4. Apply migrations to the production D1
 npx wrangler d1 migrations apply ffffound --remote

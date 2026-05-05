@@ -7,8 +7,8 @@ compatibility_date = "2025-01-01"
 # then paste the returned database_id here.
 [[d1_databases]]
 binding = "DB"
-database_name = "ffffound"
-database_id = "dbd99ab3-8952-4a69-b111-8e60a86470a9"
+database_name = "ffffound2"
+database_id = "7920c686-6b27-4659-9411-b1c088760552"
 migrations_dir = "migrations"
 
 # R2: image bytes. Create with:

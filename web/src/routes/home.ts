@@ -10,19 +10,35 @@ const PAGE = 25;
 export async function homeRoute(c: Context<{ Bindings: Env }>) {
   const offset = parseInt(c.req.query("offset") ?? "0", 10) || 0;
 
-  const { results } = await c.env.DB.prepare(
+  // Original ffffound's "Top" was a recent-saves firehose. The naive query
+  // (GROUP BY image_id with MAX(saved_at)) blows past D1's 30-second timeout
+  // on 6.5M saves. Instead: walk the saves table in saved_at-DESC order via
+  // the existing index, dedupe by image_id in JS, return PAGE rows.
+  // Worst-case fetch is PAGE * over-fetch_factor; a few savers re-saving the
+  // same hot image don't blow the budget.
+  const overFetch = (offset + PAGE) * 4;  // grow with offset; supports paging
+  const { results: saveRows } = await c.env.DB.prepare(
     `SELECT i.image_id, i.uploader, i.title, i.source_url, i.cdn_thumbnail_url,
             i.r2_key, i.width, i.height, i.uploaded_at, i.save_count,
-            MAX(s.saved_at) AS last_save
-     FROM images i
-     JOIN saves s ON s.image_id = i.image_id
+            s.saved_at AS last_save
+     FROM saves s
+     JOIN images i ON i.image_id = s.image_id
      WHERE s.saved_at IS NOT NULL
-     GROUP BY i.image_id
-     ORDER BY last_save DESC
-     LIMIT ? OFFSET ?`
+     ORDER BY s.saved_at DESC
+     LIMIT ?`
   )
-    .bind(PAGE, offset)
+    .bind(overFetch)
     .all<ImageRow & { last_save: number }>();
+
+  // Dedupe by image_id, keep first occurrence (= most recent save event).
+  const seen = new Set<string>();
+  const deduped: typeof saveRows = [];
+  for (const row of saveRows) {
+    if (seen.has(row.image_id)) continue;
+    seen.add(row.image_id);
+    deduped.push(row);
+  }
+  const results = deduped.slice(offset, offset + PAGE);
 
   const ids = results.map((r) => r.image_id);
   const placeholders = ids.length ? ids.map(() => "?").join(",") : "''";
