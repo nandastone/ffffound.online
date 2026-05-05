@@ -62,6 +62,7 @@ export async function userRoute(c: Context<{ Bindings: Env }>) {
     Layout({
       title: `${user.display_name ?? user.username} (@${user.username})`,
       titleBlock,
+      env: c.env,
       meta: {
         description: `${user.save_count.toLocaleString()} images saved by ${user.username} on FFFFOUND!`,
         canonical: absUrl(c, offset > 0 ? `${userPath}?offset=${offset}` : userPath),

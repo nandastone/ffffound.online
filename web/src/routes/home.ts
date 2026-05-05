@@ -70,6 +70,7 @@ export async function homeRoute(c: Context<{ Bindings: Env }>) {
     Layout({
       title: offset > 0 ? `Top — page ${Math.floor(offset / PAGE) + 1}` : "Top",
       titleBlock,
+      env: c.env,
       meta: {
         description: "FFFFOUND! preserved. The 2007–2017 image bookmarking site, browsable again. 1.28M images, 12K curators, ten years of internet aesthetic.",
         canonical: absUrl(c, offset > 0 ? `/?offset=${offset}` : "/"),

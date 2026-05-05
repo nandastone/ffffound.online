@@ -1,4 +1,5 @@
 import { html, raw } from "hono/html";
+import type { Env } from "./types";
 
 // SEO + social-meta props plumbed in by each route.
 export interface LayoutMeta {
@@ -17,12 +18,15 @@ const SITE_TAGLINE = "Image bookmarking, preserved.";
 // Faithful 2017 ffffound chrome. Markup mirrors the captured pages (table-based
 // layout, original class names) so the original `found-min.r3000.css` styles it
 // without modification.
-export function Layout(props: { title: string; children: unknown; titleBlock?: unknown; meta?: LayoutMeta }) {
+export function Layout(props: { title: string; children: unknown; titleBlock?: unknown; meta?: LayoutMeta; env?: Env }) {
   const m = props.meta ?? {};
   const desc = m.description ?? `${SITE_TAGLINE} The 2007–2017 ffffound corpus, browsable again.`;
   const canonical = m.canonical;
   const ogType = m.ogType ?? "website";
   const ogImage = m.ogImage;
+  const adsensePub = props.env?.ADSENSE_PUBLISHER_ID;
+  const adsenseSlot = props.env?.ADSENSE_SLOT_ID;
+  const adsenseEnabled = !!(adsensePub && adsenseSlot);
 
   return html`<!doctype html>
 <html lang="en">
@@ -54,6 +58,16 @@ ${m.jsonLd ? html`<script type="application/ld+json">${raw(JSON.stringify(m.json
 <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
 <link rel="stylesheet" type="text/css" href="/static/assets/found-min.r3000.css" />
 <link rel="stylesheet" type="text/css" media="only screen and (max-device-width:480px)" href="/static/assets/found-pda-min.r3000.css" />
+<style>
+/* Constrain thumbnails — original ffffound served pre-sized _xs/_s variants;
+   our archive only kept the medium variant, so we cover-crop to fit the cell. */
+.related_to_item img,
+.related_to_item_xs img { width:170px; height:170px; object-fit:cover; display:block; }
+.more_images_item img   { width:100px; height:100px; object-fit:cover; display:block; }
+</style>
+${adsenseEnabled
+  ? html`<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsensePub}" crossorigin="anonymous"></script>`
+  : ""}
 </head>
 <body>
 
@@ -107,6 +121,23 @@ ${m.jsonLd ? html`<script type="application/ld+json">${raw(JSON.stringify(m.json
           <li><a href="/log/">Change Log</a></li>
         </ul>
       </div>
+
+      ${adsenseEnabled ? html`
+      <div id="menu-ads">
+        <ul class="ads">
+          <li class="header"><i>advertisement</i></li>
+          <li class="ad" id="ad-deck">
+            <ins class="adsbygoogle"
+                 style="display:block;width:120px"
+                 data-ad-client="${adsensePub}"
+                 data-ad-slot="${adsenseSlot}"
+                 data-ad-format="auto"
+                 data-full-width-responsive="false"></ins>
+            <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+          </li>
+        </ul>
+      </div>
+      ` : ""}
 
     </div>
   </td>

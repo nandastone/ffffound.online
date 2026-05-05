@@ -61,10 +61,13 @@ export async function imageRoute(c: Context<{ Bindings: Env }>) {
   ]);
 
   const savers = saversResult.results.map((r) => r.username);
-  const related = relatedResult.results;
+  // Only show grid items where we actually have bytes — otherwise <img src="">
+  // would render as a broken image. ~36% of corpus has no r2_key.
+  const related = relatedResult.results.filter((r) => r.r2_key);
 
   const latestByUser = new Map<string, SaverRow[]>();
   for (const row of latestPostsResult.results) {
+    if (!row.r2_key) continue;  // skip thumbs without bytes; would render broken
     const list = latestByUser.get(row.username) ?? [];
     if (list.length < THUMBS_PER_SAVER) list.push(row);
     latestByUser.set(row.username, list);
@@ -90,6 +93,7 @@ export async function imageRoute(c: Context<{ Bindings: Env }>) {
   return c.html(
     Layout({
       title: titleText,
+      env: c.env,
       meta: {
         description,
         canonical: absUrl(c, detailHref),
@@ -144,7 +148,7 @@ ${postedDate ? html`<div class="date">posted on ${postedDate}</div>` : ""}
 ${savers.length
   ? html`<div class="saved_by">
 <span class="saved_by">saved by ${image.save_count} ${image.save_count === 1 ? "person" : "people"}: </span>
-${savers.map((u, i) => html`<a href="/home/${u}/found/">${u}</a>${i < savers.length - 1 ? ", " : ""}`)}
+${savers.map((u, i) => html`<a href="/home/${u}/found">${u}</a>${i < savers.length - 1 ? ", " : ""}`)}
 </div>`
   : ""}
 
@@ -160,7 +164,7 @@ ${latestByUser.size
   ? html`<div class="more_images_container">
 ${Array.from(latestByUser.entries()).map(([user, posts]) => html`
 <div class="more_images">
-<p><a href="/home/${user}/post/">${user}'s</a> latest post.</p>
+<p><a href="/home/${user}/post">${user}'s</a> latest post.</p>
 ${posts.map((p) => html`<div class="more_images_item"><table border="0" cellspacing="0" cellpadding="0"><tr><td width="100" height="100" align="center"><a href="/image/${p.image_id}"><img src="${p.r2_key ? `/img/${p.r2_key}` : p.cdn_thumbnail_url ?? ""}" alt="" width="100" height="100"></a></td></tr></table></div>`)}
 <br clear="all">
 </div>

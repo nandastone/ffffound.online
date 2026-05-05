@@ -9,6 +9,17 @@ import { robotsRoute, sitemapIndexRoute, sitemapHomeRoute, sitemapImagesRoute, s
 
 const app = new Hono<{ Bindings: Env }>();
 
+// Normalize trailing slashes — some original ffffound links carried `/`
+// (e.g. /home/<user>/found/), so visitors and old indices may hit those.
+// Redirect once to the canonical no-slash form for cache + SEO consistency.
+app.use("*", async (c, next) => {
+  const u = new URL(c.req.url);
+  if (u.pathname.length > 1 && u.pathname.endsWith("/")) {
+    return c.redirect(u.pathname.replace(/\/+$/, "") + u.search, 301);
+  }
+  await next();
+});
+
 // Edge-cache HTML pages via the Workers Cache API.
 // Cloudflare doesn't auto-cache Worker responses — the Cache-Control header
 // alone only tells the browser. So we explicitly check + populate caches.default.

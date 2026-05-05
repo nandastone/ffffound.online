@@ -35,7 +35,7 @@ ${row.r2_key
 <div class="button"><a class="link" style="text-decoration:line-through;">FLAG THIS IMAGE</a></div>
 </td>
 <td valign="top" class="${relatedThumbs.length ? "vline" : ""}">
-${relatedThumbs.map((r) => html`<div class="related_to_item_xs"><a href="/image/${r.image_id}"><img src="${r.r2_key ? `/img/${r.r2_key}` : r.cdn_thumbnail_url ?? ""}" width="100"></a></div>`)}
+${relatedThumbs.filter((r) => r.r2_key).map((r) => html`<div class="related_to_item_xs"><a href="/image/${r.image_id}"><img src="/img/${r.r2_key}" width="100"></a></div>`)}
 </td>
 </tr></table>
 </div>

@@ -4,6 +4,10 @@ export interface Env {
   DB: D1Database;
   IMAGES: R2Bucket;
   CACHE_MAX_AGE: string;
+  // AdSense — both must be set for the slot to render. Empty string = no ad.
+  // Pulled in via wrangler.toml [vars] or `wrangler secret put`.
+  ADSENSE_PUBLISHER_ID?: string;   // "ca-pub-XXXXXXXXXXXXXXXX"
+  ADSENSE_SLOT_ID?: string;        // numeric slot id from the ad unit
 }
 
 export interface UserRow {
