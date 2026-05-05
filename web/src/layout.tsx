@@ -1,25 +1,59 @@
-import { html } from "hono/html";
+import { html, raw } from "hono/html";
+
+// SEO + social-meta props plumbed in by each route.
+export interface LayoutMeta {
+  description?: string;          // <meta name="description"> + og:description
+  canonical?: string;            // canonical URL (path; we prefix the host)
+  ogType?: "website" | "article";
+  ogImage?: string;              // absolute URL for og:image / twitter:image
+  prev?: string | null;          // rel=prev (paginated routes)
+  next?: string | null;          // rel=next
+  jsonLd?: object;               // structured data; serialized into a <script>
+}
+
+const SITE_NAME = "FFFFOUND!";
+const SITE_TAGLINE = "Image bookmarking, preserved.";
 
 // Faithful 2017 ffffound chrome. Markup mirrors the captured pages (table-based
 // layout, original class names) so the original `found-min.r3000.css` styles it
-// without modification. Layout structure:
-//
-//   row 1: 160-wide spacer cell + empty cell  (sets column widths)
-//   row 2: logo + "title"   (logo column 160px, title column flexible)
-//   row 3: 30-tall spacer
-//   row 4: sidebar menu + main content
-//
-// The sidebar / nav menu reproduces the captured menu items but with all the
-// signed-in / interactive ones either removed or stubbed (the site is read-only).
-export function Layout(props: { title: string; children: unknown; titleBlock?: unknown }) {
+// without modification.
+export function Layout(props: { title: string; children: unknown; titleBlock?: unknown; meta?: LayoutMeta }) {
+  const m = props.meta ?? {};
+  const desc = m.description ?? `${SITE_TAGLINE} The 2007–2017 ffffound corpus, browsable again.`;
+  const canonical = m.canonical;
+  const ogType = m.ogType ?? "website";
+  const ogImage = m.ogImage;
+
   return html`<!doctype html>
 <html lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <meta name="viewport" content="width=890" />
-<title>${props.title} | FFFFOUND!</title>
-<link rel="shortcut icon" type="image/ico" href="/favicon.ico" />
+<title>${SITE_NAME} | ${props.title}</title>
+<meta name="description" content="${desc}" />
+${canonical ? html`<link rel="canonical" href="${canonical}" />` : ""}
+${m.prev ? html`<link rel="prev" href="${m.prev}" />` : ""}
+${m.next ? html`<link rel="next" href="${m.next}" />` : ""}
+
+<!-- Open Graph -->
+<meta property="og:site_name" content="${SITE_NAME}" />
+<meta property="og:title" content="${props.title}" />
+<meta property="og:description" content="${desc}" />
+<meta property="og:type" content="${ogType}" />
+${canonical ? html`<meta property="og:url" content="${canonical}" />` : ""}
+${ogImage ? html`<meta property="og:image" content="${ogImage}" />` : ""}
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="${ogImage ? "summary_large_image" : "summary"}" />
+<meta name="twitter:title" content="${props.title}" />
+<meta name="twitter:description" content="${desc}" />
+${ogImage ? html`<meta name="twitter:image" content="${ogImage}" />` : ""}
+
+${m.jsonLd ? html`<script type="application/ld+json">${raw(JSON.stringify(m.jsonLd))}</script>` : ""}
+
+<link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
 <link rel="stylesheet" type="text/css" href="/static/assets/found-min.r3000.css" />
+<link rel="stylesheet" type="text/css" media="only screen and (max-device-width:480px)" href="/static/assets/found-pda-min.r3000.css" />
 </head>
 <body>
 

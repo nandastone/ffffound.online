@@ -5,6 +5,7 @@ import { imageRoute } from "./routes/image";
 import { userRoute } from "./routes/user";
 import { imgProxyRoute } from "./routes/img";
 import { cdnRoute } from "./routes/cdn";
+import { robotsRoute, sitemapIndexRoute, sitemapHomeRoute, sitemapImagesRoute, sitemapUsersRoute } from "./routes/seo";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -22,6 +23,13 @@ app.get("/img/:key{.+}", imgProxyRoute);
 // CDN compatibility shim — used to re-render captured original ffffound HTML
 // where image URLs follow ffffound's `<sha1>_<size>.<ext>` filename scheme.
 app.get("/cdn/:filename", cdnRoute);
+
+// SEO surfaces.
+app.get("/robots.txt", robotsRoute);
+app.get("/sitemap.xml", sitemapIndexRoute);
+app.get("/sitemap-home.xml", sitemapHomeRoute);
+app.get("/sitemap/images/:n", sitemapImagesRoute);
+app.get("/sitemap/users/:n", sitemapUsersRoute);
 
 app.notFound((c) => c.text("not found", 404));
 app.onError((err, c) => {

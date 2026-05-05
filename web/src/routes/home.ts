@@ -3,10 +3,12 @@ import { html } from "hono/html";
 import type { Env, ImageRow } from "../types";
 import { Layout } from "../layout";
 import { renderListAsset } from "./_asset_block";
+import { absUrl } from "./_url";
+
+const PAGE = 25;
 
 export async function homeRoute(c: Context<{ Bindings: Env }>) {
   const offset = parseInt(c.req.query("offset") ?? "0", 10) || 0;
-  const PAGE = 25;
 
   const { results } = await c.env.DB.prepare(
     `SELECT i.image_id, i.uploader, i.title, i.source_url, i.cdn_thumbnail_url,
@@ -22,7 +24,6 @@ export async function homeRoute(c: Context<{ Bindings: Env }>) {
     .bind(PAGE, offset)
     .all<ImageRow & { last_save: number }>();
 
-  // For each asset, fetch up to 5 related thumbnails (the vline column).
   const ids = results.map((r) => r.image_id);
   const placeholders = ids.length ? ids.map(() => "?").join(",") : "''";
   const relatedRs = await c.env.DB.prepare(
@@ -45,10 +46,29 @@ export async function homeRoute(c: Context<{ Bindings: Env }>) {
 
   const titleBlock = html`<h1 style="margin:0;font-size:24px;font-weight:normal">Top</h1>`;
 
+  // Hero image for og:image: first image in the feed that has bytes.
+  const hero = results.find((r) => r.r2_key);
+  const ogImage = hero?.r2_key ? absUrl(c, `/img/${hero.r2_key}`) : undefined;
+
   return c.html(
     Layout({
-      title: "Top",
+      title: offset > 0 ? `Top — page ${Math.floor(offset / PAGE) + 1}` : "Top",
       titleBlock,
+      meta: {
+        description: "FFFFOUND! preserved. The 2007–2017 image bookmarking site, browsable again. 1.28M images, 12K curators, ten years of internet aesthetic.",
+        canonical: absUrl(c, offset > 0 ? `/?offset=${offset}` : "/"),
+        ogType: "website",
+        ogImage,
+        prev: offset > 0 ? absUrl(c, offset - PAGE > 0 ? `/?offset=${offset - PAGE}` : "/") : null,
+        next: results.length === PAGE ? absUrl(c, `/?offset=${offset + PAGE}`) : null,
+        jsonLd: {
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          "name": "FFFFOUND! — Top",
+          "url": absUrl(c, "/"),
+          "description": "Recent saves on FFFFOUND!",
+        },
+      },
       children: html`
 <div id="assets">
 ${results.map((row) => renderListAsset(row, relatedBySource.get(row.image_id) ?? []))}

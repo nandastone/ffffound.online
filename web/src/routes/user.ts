@@ -3,6 +3,7 @@ import { html } from "hono/html";
 import type { Env, UserRow, ImageRow } from "../types";
 import { Layout } from "../layout";
 import { renderListAsset } from "./_asset_block";
+import { absUrl } from "./_url";
 
 const PAGE = 25;
 
@@ -53,10 +54,35 @@ export async function userRoute(c: Context<{ Bindings: Env }>) {
     ${user.bio ? html`<p style="max-width:60ch">${user.bio}</p>` : ""}
   `;
 
+  const hero = results.find((r) => r.r2_key);
+  const ogImage = hero?.r2_key ? absUrl(c, `/img/${hero.r2_key}`) : undefined;
+  const userPath = `/home/${username}`;
+
   return c.html(
     Layout({
-      title: username,
+      title: `${user.display_name ?? user.username} (@${user.username})`,
       titleBlock,
+      meta: {
+        description: `${user.save_count.toLocaleString()} images saved by ${user.username} on FFFFOUND!`,
+        canonical: absUrl(c, offset > 0 ? `${userPath}?offset=${offset}` : userPath),
+        ogType: "website",
+        ogImage,
+        prev: offset > 0 ? absUrl(c, offset - PAGE > 0 ? `${userPath}?offset=${offset - PAGE}` : userPath) : null,
+        next: results.length === PAGE ? absUrl(c, `${userPath}?offset=${offset + PAGE}`) : null,
+        jsonLd: {
+          "@context": "https://schema.org",
+          "@type": "ProfilePage",
+          "url": absUrl(c, userPath),
+          "name": user.display_name ?? user.username,
+          "mainEntity": {
+            "@type": "Person",
+            "name": user.display_name ?? user.username,
+            "alternateName": user.username,
+            ...(user.bio ? { "description": user.bio } : {}),
+            ...(user.joined_at ? { "memberOf": { "@type": "Organization", "name": "FFFFOUND!", "foundingDate": new Date(user.joined_at * 1000).toISOString() } } : {}),
+          },
+        },
+      },
       children: html`
 <div id="assets">
 ${results.map((row) => renderListAsset(row, relatedBySource.get(row.image_id) ?? []))}

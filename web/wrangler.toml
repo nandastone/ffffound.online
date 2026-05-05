@@ -8,7 +8,7 @@ compatibility_date = "2025-01-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "ffffound"
-database_id = "892346b1-0bdb-4661-8a20-bb21e8d01614"
+database_id = "dbd99ab3-8952-4a69-b111-8e60a86470a9"
 migrations_dir = "migrations"
 
 # R2: image bytes. Create with:
