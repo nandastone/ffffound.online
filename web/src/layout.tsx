@@ -10,6 +10,7 @@ export interface LayoutMeta {
   prev?: string | null;          // rel=prev (paginated routes)
   next?: string | null;          // rel=next
   jsonLd?: object;               // structured data; serialized into a <script>
+  noindex?: boolean;             // <meta name="robots" content="noindex"> for thin / stub pages
 }
 
 const SITE_NAME = "FFFFOUND!";
@@ -35,6 +36,7 @@ export function Layout(props: { title: string; children: unknown; titleBlock?: u
 <meta name="viewport" content="width=890" />
 <title>${SITE_NAME} | ${props.title}</title>
 <meta name="description" content="${desc}" />
+${m.noindex ? html`<meta name="robots" content="noindex,follow" />` : ""}
 ${canonical ? html`<link rel="canonical" href="${canonical}" />` : ""}
 ${m.prev ? html`<link rel="prev" href="${m.prev}" />` : ""}
 ${m.next ? html`<link rel="next" href="${m.next}" />` : ""}

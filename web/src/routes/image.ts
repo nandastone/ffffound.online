@@ -81,6 +81,11 @@ export async function imageRoute(c: Context<{ Bindings: Env }>) {
   const sourceHostPath = sourceUrlDescription(image.source_url);
   const postedDate = image.uploaded_at ? formatPostedAt(image.uploaded_at) : "";
 
+  // "Stub" page: we only have the SHA1 (and maybe bytes), no captured metadata.
+  // ArchiveTeam saw this image's id in some other page's "you may like these"
+  // list but never crawled its own /image/<sha1> page or any user save of it.
+  const isStub = !image.title && !image.source_url && image.save_count === 0;
+
   // SEO description: blend page title, save count, posted date, and source host.
   const sourceHost = image.source_url ? new URL(image.source_url).hostname : null;
   const description = [
@@ -99,6 +104,7 @@ export async function imageRoute(c: Context<{ Bindings: Env }>) {
         canonical: absUrl(c, detailHref),
         ogType: "article",
         ogImage: image.r2_key ? absUrl(c, `/img/${image.r2_key}`) : undefined,
+        noindex: isStub,
         jsonLd: {
           "@context": "https://schema.org",
           "@type": "ImageObject",
@@ -136,6 +142,13 @@ export async function imageRoute(c: Context<{ Bindings: Env }>) {
 ${image.r2_key
   ? html`<a id="${assetEl}-link-img" href="${sourceUrl}" target="_blank" rel="noopener nofollow"><img id="${assetEl}-img" src="${imgSrc}" alt="${titleText}" ${image.width ? html` width="${Math.min(image.width, 520)}"` : ""}${image.height && image.width ? html` height="${Math.round(image.height * Math.min(image.width, 520) / image.width)}"` : ""}></a>`
   : html`<p style="color:#909090">image bytes not in archive</p>`}
+
+${isStub
+  ? html`<p style="color:#909090;font-size:12px;font-style:italic;margin-top:10px;max-width:480px">
+      This image was saved on ffffound but its page wasn't captured by ArchiveTeam.
+      Only the bytes survive — title, source, savers, and related images are unknown.
+    </p>`
+  : ""}
 
 <div class="button"><a class="link" style="text-decoration:line-through;">FLAG THIS IMAGE</a></div>
 </td>

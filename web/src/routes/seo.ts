@@ -29,10 +29,17 @@ Sitemap: ${absUrl(c, "/sitemap.xml")}
 // We keep the count rough: COUNT(*)/50000 once per cold cache, then served
 // from edge cache for a day.
 // ---------------------------------------------------------------------------
+// Bare-stub images (no metadata) are excluded from the sitemap so search
+// engines don't crawl ~150K thin pages that would only hurt our index quality.
+// Definition: image_id exists only because some other image's "you may like
+// these" listed it — no title, no source, no savers.
+const INDEXABLE_IMAGES_FILTER =
+  "(title IS NOT NULL OR source_url IS NOT NULL OR save_count > 0)";
+
 export async function sitemapIndexRoute(c: Context<{ Bindings: Env }>) {
   const [imageCount, userCount] = await Promise.all([
-    c.env.DB.prepare(`SELECT COUNT(*) AS n FROM images`).first<{ n: number }>(),
-    c.env.DB.prepare(`SELECT COUNT(*) AS n FROM users`).first<{ n: number }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS n FROM images WHERE ${INDEXABLE_IMAGES_FILTER}`).first<{ n: number }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS n FROM users WHERE save_count > 0`).first<{ n: number }>(),
   ]);
 
   const imageSitemaps = Math.ceil((imageCount?.n ?? 0) / URLS_PER_SITEMAP);
@@ -78,7 +85,9 @@ export async function sitemapImagesRoute(c: Context<{ Bindings: Env }>) {
   const offset = idx * URLS_PER_SITEMAP;
 
   const { results } = await c.env.DB.prepare(
-    `SELECT image_id, uploaded_at FROM images ORDER BY image_id LIMIT ? OFFSET ?`
+    `SELECT image_id, uploaded_at FROM images
+     WHERE ${INDEXABLE_IMAGES_FILTER}
+     ORDER BY image_id LIMIT ? OFFSET ?`
   )
     .bind(URLS_PER_SITEMAP, offset)
     .all<{ image_id: string; uploaded_at: number | null }>();
