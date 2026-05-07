@@ -105,8 +105,8 @@ ${adsenseEnabled
         <ul class="menu">
           <li id="menu-top" style="margin-bottom:10px;"><a href="/">Top</a></li>
           <li id="menu-about"><a href="/about">About</a></li>
-          <li id="menu-screensaver"><a href="/screensaver/">Screensaver</a></li>
-          <li id="menu-iphone"><a href="/iphone/">iPhone</a></li>
+          <li id="menu-screensaver"><a href="javascript:void(0);" style="text-decoration:line-through;">Screensaver</a></li>
+          <li id="menu-iphone"><a href="javascript:void(0);" style="text-decoration:line-through;">iPhone</a></li>
           <li id="menu-register"><a href="javascript:void(0);" style="text-decoration:line-through;">Register</a></li>
         </ul>
       </div>

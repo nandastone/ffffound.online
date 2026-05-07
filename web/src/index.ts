@@ -5,6 +5,9 @@ import { imageRoute } from "./routes/image";
 import { userRoute } from "./routes/user";
 import { imgProxyRoute } from "./routes/img";
 import { cdnRoute } from "./routes/cdn";
+import { aboutRoute } from "./routes/about";
+import { legalRoute } from "./routes/legal";
+import { logRoute } from "./routes/log";
 import { robotsRoute, sitemapIndexRoute, sitemapHomeRoute, sitemapImagesRoute, sitemapUsersRoute } from "./routes/seo";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -63,6 +66,13 @@ app.get("/image/:id", imageRoute);
 app.get("/home/:name", userRoute);         // user's saves (root)
 app.get("/home/:name/found", userRoute);   // explicit "found" stream
 app.get("/home/:name/post", userRoute);
+
+// Static pages — About is reproduced from the captured /about HTML; Legal
+// and Change Log are written for the preservation site (the originals are
+// preserved verbatim in the source WARC).
+app.get("/about", aboutRoute);
+app.get("/legal", legalRoute);
+app.get("/log", logRoute);
 
 // R2 image proxy. Worker reads from the IMAGES bucket and re-emits with
 // long Cache-Control so Cloudflare caches it at the edge.

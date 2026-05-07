@@ -82,7 +82,7 @@ export async function imageRoute(c: Context<{ Bindings: Env }>) {
   const postedDate = image.uploaded_at ? formatPostedAt(image.uploaded_at) : "";
 
   // "Stub" page: we only have the SHA1 (and maybe bytes), no captured metadata.
-  // ArchiveTeam saw this image's id in some other page's "you may like these"
+  // The crawler saw this image's id in some other page's "you may like these"
   // list but never crawled its own /image/<sha1> page or any user save of it.
   const isStub = !image.title && !image.source_url && image.save_count === 0;
 
@@ -145,7 +145,7 @@ ${image.r2_key
 
 ${isStub
   ? html`<p style="color:#909090;font-size:12px;font-style:italic;margin-top:10px;max-width:480px">
-      This image was saved on ffffound but its page wasn't captured by ArchiveTeam.
+      This image was saved on ffffound but its page wasn't preserved in the archive.
       Only the bytes survive — title, source, savers, and related images are unknown.
     </p>`
   : ""}
