@@ -10,7 +10,21 @@ const PAGE_CHANGEFREQ = "yearly"; // immutable archive
 // /robots.txt
 // ---------------------------------------------------------------------------
 export function robotsRoute(c: Context<{ Bindings: Env }>) {
-  const body = `User-agent: *
+  const body = `# AI crawlers opt out of scraping and model training. This list was previously
+# injected by Cloudflare's managed robots.txt; it is self-managed here so the file
+# has one source. It must be kept current as new crawlers appear.
+User-agent: Amazonbot
+User-agent: Applebot-Extended
+User-agent: Bytespider
+User-agent: CCBot
+User-agent: ClaudeBot
+User-agent: Google-Extended
+User-agent: GPTBot
+User-agent: meta-externalagent
+Disallow: /
+
+User-agent: *
+Content-Signal: search=yes,ai-train=no
 Allow: /
 Disallow: /cdn/
 Disallow: /static/
