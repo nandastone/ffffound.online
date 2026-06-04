@@ -14,6 +14,7 @@ export function robotsRoute(c: Context<{ Bindings: Env }>) {
 Allow: /
 Disallow: /cdn/
 Disallow: /static/
+Disallow: /*?*offset=
 
 Sitemap: ${absUrl(c, "/sitemap.xml")}
 `;

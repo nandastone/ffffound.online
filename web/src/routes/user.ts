@@ -6,10 +6,15 @@ import { renderListAsset } from "./_asset_block";
 import { absUrl, imgUrl } from "./_url";
 
 const PAGE = 25;
+// Cap pagination depth. Every image is in the sitemap, so deep user pages add no
+// discovery value, and an uncapped offset is an infinite crawl space. Beyond the
+// cap we 404; deeper saves stay reachable individually and via the sitemap.
+const MAX_OFFSET = 500;
 
 export async function userRoute(c: Context<{ Bindings: Env }>) {
   const username = c.req.param("name");
   const offset = parseInt(c.req.query("offset") ?? "0", 10) || 0;
+  if (offset < 0 || offset > MAX_OFFSET) return c.notFound();
 
   const user = await c.env.DB.prepare(`SELECT * FROM users WHERE username = ?`)
     .bind(username)
@@ -69,7 +74,7 @@ export async function userRoute(c: Context<{ Bindings: Env }>) {
         ogType: "website",
         ogImage,
         prev: offset > 0 ? absUrl(c, offset - PAGE > 0 ? `${userPath}?offset=${offset - PAGE}` : userPath) : null,
-        next: results.length === PAGE ? absUrl(c, `${userPath}?offset=${offset + PAGE}`) : null,
+        next: results.length === PAGE && offset + PAGE <= MAX_OFFSET ? absUrl(c, `${userPath}?offset=${offset + PAGE}`) : null,
         jsonLd: {
           "@context": "https://schema.org",
           "@type": "ProfilePage",
@@ -88,7 +93,7 @@ export async function userRoute(c: Context<{ Bindings: Env }>) {
 <div id="assets">
 ${results.map((row) => renderListAsset(c, row, relatedBySource.get(row.image_id) ?? []))}
 </div>
-${results.length === PAGE
+${results.length === PAGE && offset + PAGE <= MAX_OFFSET
   ? html`<div style="margin:40px 0;padding-left:20px"><a href="/home/${username}/found?offset=${offset + PAGE}">next →</a></div>`
   : ""}
       `,

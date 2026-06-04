@@ -6,9 +6,15 @@ import { renderListAsset } from "./_asset_block";
 import { absUrl, imgUrl } from "./_url";
 
 const PAGE = 25;
+// "Top" is a volatile recent-saves firehose, so deep pages carry no stable
+// indexing value (item discovery is the sitemap's job) and deep offsets cost
+// O(offset) to compute. Cap the depth; beyond it we 404 so the offset parameter
+// is a finite space rather than an infinite crawl trap.
+const MAX_OFFSET = 500;
 
 export async function homeRoute(c: Context<{ Bindings: Env }>) {
   const offset = parseInt(c.req.query("offset") ?? "0", 10) || 0;
+  if (offset < 0 || offset > MAX_OFFSET) return c.notFound();
 
   // Original ffffound's "Top" was a recent-saves firehose. The naive query
   // (GROUP BY image_id with MAX(saved_at)) blows past D1's 30-second timeout
@@ -77,7 +83,7 @@ export async function homeRoute(c: Context<{ Bindings: Env }>) {
         ogType: "website",
         ogImage,
         prev: offset > 0 ? absUrl(c, offset - PAGE > 0 ? `/?offset=${offset - PAGE}` : "/") : null,
-        next: results.length === PAGE ? absUrl(c, `/?offset=${offset + PAGE}`) : null,
+        next: results.length === PAGE && offset + PAGE <= MAX_OFFSET ? absUrl(c, `/?offset=${offset + PAGE}`) : null,
         jsonLd: {
           "@context": "https://schema.org",
           "@type": "CollectionPage",
@@ -90,7 +96,7 @@ export async function homeRoute(c: Context<{ Bindings: Env }>) {
 <div id="assets">
 ${results.map((row) => renderListAsset(c, row, relatedBySource.get(row.image_id) ?? []))}
 </div>
-${results.length === PAGE
+${results.length === PAGE && offset + PAGE <= MAX_OFFSET
   ? html`<div style="margin:40px 0;padding-left:20px"><a href="/?offset=${offset + PAGE}">next →</a></div>`
   : ""}
       `,
