@@ -92,3 +92,33 @@ resource "cloudflare_bot_management" "this" {
   enable_js               = false
   fight_mode              = false
 }
+
+# ---------------------------------------------------------------------------
+# Edge crawler block. meta-webindexer, AhrefsBot and SemrushBot walk the ~1.1M
+# /image/ pages and exhausted the Workers free-tier request cap, since every
+# uncached page render is one Worker invocation. This rule blocks them at the
+# edge, before the Worker runs, so they cost zero invocations. Search engines
+# (Googlebot, Bingbot) are deliberately absent from the list, so SEO is
+# unaffected. This resource owns the whole http_request_firewall_custom
+# entrypoint, so add future custom rules here, not in the dashboard.
+# ---------------------------------------------------------------------------
+locals {
+  # Bulk crawlers to block. Matched case-insensitively against the User-Agent.
+  blocked_crawler_uas = ["meta-webindexer", "ahrefsbot", "semrushbot"]
+}
+
+resource "cloudflare_ruleset" "zone_custom_waf" {
+  zone_id = var.zone_id
+  name    = "ffffound custom rules"
+  kind    = "zone"
+  phase   = "http_request_firewall_custom"
+
+  rules = [{
+    action      = "block"
+    description = "Block bulk crawlers exhausting the Workers free-tier cap. Search engines unaffected."
+    enabled     = true
+    expression = join(" or ", [
+      for ua in local.blocked_crawler_uas : "(lower(http.user_agent) contains \"${ua}\")"
+    ])
+  }]
+}
