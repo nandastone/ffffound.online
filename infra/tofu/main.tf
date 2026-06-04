@@ -68,3 +68,27 @@ resource "cloudflare_workers_custom_domain" "root" {
     prevent_destroy = true
   }
 }
+
+# ---------------------------------------------------------------------------
+# Bot management. robots.txt is self-managed in the Worker (seo.ts), so we turn
+# off Cloudflare's managed robots.txt injection for a single source of truth.
+# Every other bot setting is optional + computed and deliberately omitted so it
+# keeps its live value. Notably ai_bots_protection stays "block", the WAF-level
+# AI-scraper block enforced independently of robots.txt.
+# ---------------------------------------------------------------------------
+
+resource "cloudflare_bot_management" "this" {
+  zone_id = var.zone_id
+
+  # The actual change: stop Cloudflare prepending its managed robots.txt.
+  is_robots_txt_managed = false
+
+  # Pinned to current live values so the PUT that flips the line above cannot
+  # reset them. ai_bots_protection = "block" is the WAF-level AI-scraper block,
+  # enforced independently of robots.txt, and must be preserved.
+  ai_bots_protection      = "block"
+  content_bots_protection = "disabled"
+  crawler_protection      = "disabled"
+  enable_js               = false
+  fight_mode              = false
+}
