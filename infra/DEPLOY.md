@@ -2,47 +2,31 @@
 
 Production runs on Cloudflare:
 
-- **R2** (`ffffound-images` bucket) — image bytes
-- **D1** (`ffffound` database) — metadata
-- **Worker** (`ffffound`) — render
-- **Custom domain** — `ffffound.online`
+- **R2** (`ffffound-images`) — image bytes
+- **D1** (`ffffound2`) — metadata
+- **Worker** (`ffffound`) — render, served at `ffffound.online`
+- **Image host** (`img.ffffound.online`) — R2 bytes direct, bypasses the Worker
 
-The Worker, R2 binding, and D1 binding are all declared in `web/wrangler.toml`.
-The same Worker code runs locally (against miniflare) and in production.
+Three layers, three tools, one credential:
 
-## One-time bootstrap
+- **Infrastructure** (bucket, database, domains) is OpenTofu in [`tofu/`](./tofu/),
+  the source of truth for what exists.
+- **Code** is wrangler (`web/`), via `npx wrangler deploy`.
+- **Data** (image bytes, metadata rows) is the scripts in this directory.
+
+All three authenticate with one account-owned `CLOUDFLARE_API_TOKEN`. There is no
+`wrangler login` step anymore; export the token and every tool uses it.
 
 ```bash
-cd web
-
-# 1. Log in (opens a browser)
-npx wrangler login
-
-# 2. Create the R2 bucket
-npx wrangler r2 bucket create ffffound-images
-
-# 3. Create the D1 database in us-west; copy the returned `database_id` into wrangler.toml.
-#    Region pinning matters: the very first attempt landed us in OC (Sydney) which
-#    went into datacenter maintenance the same day and took the site down for hours.
-#    Use --location to avoid Cloudflare picking the closest region (which may be
-#    smaller / less reliable).
-npx wrangler d1 create ffffound --location wnam   # us-west; alternatives: enam, weur, eeur, apac, oc
-
-# 4. Apply migrations to the production D1
-npx wrangler d1 migrations apply ffffound --remote
-
-# 5. Bulk-load image bytes into R2 (use rclone, fastest path)
-#    See "R2 bulk upload" below.
-
-# 6. Bulk-load metadata into D1
-#    See "D1 import" below.
-
-# 7. Deploy the Worker
-npx wrangler deploy
-
-# 8. Register ffffound.online in Cloudflare Dashboard, then:
-#    Workers & Pages → ffffound → Settings → Domains → Add custom domain
+export CLOUDFLARE_API_TOKEN=...   # account-owned, scoped; see tofu/README.md
 ```
+
+## Provision or change infrastructure
+
+See [`tofu/README.md`](./tofu/README.md). The first run imports the existing
+production resources into state (brownfield), so nothing is recreated; after that
+it is ordinary `tofu plan` / `tofu apply`. The R2 bucket, D1 database, and apex
+domain carry `prevent_destroy`, so Tofu refuses to wipe data on a stray plan.
 
 ## R2 bulk upload (~50 GB)
 
@@ -54,13 +38,14 @@ rclone copy F:/ffffound/out/images r2:ffffound-images \
     --transfers 32 --checkers 16 --progress
 ```
 
-Egress is free out of R2 via Cloudflare's CDN, so this is the only bandwidth
-cost for the project.
+Egress is free out of R2 via Cloudflare's CDN, so this is the only bandwidth cost
+for the project.
 
 ## D1 import (~3 GB SQLite)
 
-D1 caps single SQL imports around the MB range, so the parser DB needs to be
-chunked. Pipeline:
+The bucket and database themselves are provisioned by Tofu; this loads rows into
+the existing database. D1 caps single SQL imports around the MB range, so the
+parser DB needs to be chunked:
 
 ```bash
 # 1. Run stitch to populate r2_key + backfill users.save_count
@@ -71,53 +56,48 @@ python -m parser.export_d1 out/full.db ./out/d1-chunks/
 
 # 3. Apply each chunk to remote D1
 for f in out/d1-chunks/*.sql; do
-  npx wrangler d1 execute ffffound --remote --file "$f"
+  npx wrangler d1 execute ffffound2 --remote --file "$f"
 done
 ```
 
-(`parser/export_d1.py` doesn't exist yet — written when needed.)
+History note: the database was originally region-pinned at create time (`--location
+wnam`) after an early attempt landed in OC/Sydney during datacenter maintenance and
+took the site down. The database now exists and is imported by Tofu, so the region
+is fixed; this is recorded only so the lesson is not lost.
 
-## Manual cache purge after a template change
-
-The Worker sets long `Cache-Control` headers, so deployed template changes are
-**not** automatically reflected in browsers / the edge cache.
-
-Purge is **always manual** to avoid accidental no-op purges that count against
-the API budget:
+## Deploy the Worker
 
 ```bash
-# Get $ZONE_ID from Cloudflare dashboard → ffffound.online → Overview
-# Get $TOKEN from My Profile → API Tokens → "Cache Purge" template
-curl -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/purge_cache" \
-  -H "Authorization: Bearer $TOKEN" \
+cd web
+npx wrangler deploy
+```
+
+## Cache purge
+
+The Worker sets long `Cache-Control` headers, so deployed template changes are not
+automatically reflected in browsers or the edge cache. Purge is manual, to avoid
+no-op purges that count against the API budget:
+
+```bash
+# ZONE_ID is the zone_id in infra/tofu/terraform.tfvars.
+curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/purge_cache" \
+  -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"purge_everything":true}'
 ```
 
-When to run it:
-- After `wrangler deploy` if Worker code OR templates changed
-- After a D1 backfill / data correction that should be visible immediately
-- **Never** on a no-op deploy (Cloudflare rate-limits purge calls)
-
-If you only want to invalidate specific URLs (cheaper, more surgical):
-
-```bash
-curl -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/purge_cache" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"files":["https://ffffound.online/","https://ffffound.online/image/abc..."]}'
-```
+Run it after a `wrangler deploy` that changed code or templates, or after a D1
+backfill that should be visible immediately. For a surgical purge, swap
+`purge_everything` for `{"files":["https://ffffound.online/", ...]}`.
 
 ## Deploy checklist
 
-Use this for ongoing iteration once production is live:
-
 ```
-[ ] git status clean
+[ ] export CLOUDFLARE_API_TOKEN
+[ ] (infra changed) cd infra/tofu && tofu plan  # no destroys/replaces && tofu apply
 [ ] local smoke test passes (npm run dev + curl checks)
 [ ] cd web && npx wrangler deploy
-[ ] (if templates changed) curl ... purge_cache
-[ ] (if data changed)      curl ... purge_cache or surgical /files purge
+[ ] (templates or data changed) curl ... purge_cache
 [ ] verify production: open https://ffffound.online/
 ```
 
@@ -131,5 +111,5 @@ Use this for ongoing iteration once production is live:
 - **Domain** `.online` ~$1–4 first year, ~$20/yr renewal
 - **Total** ~$5–10/mo at any reasonable read traffic
 
-If traffic spikes, Cloudflare's edge cache absorbs almost everything and only
-the cold cache misses hit D1.
+If traffic spikes, Cloudflare's edge cache absorbs almost everything and only the
+cold cache misses hit D1.
