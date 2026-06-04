@@ -4,6 +4,10 @@ export interface Env {
   DB: D1Database;
   IMAGES: R2Bucket;
   CACHE_MAX_AGE: string;
+  // Origin of the R2 custom domain that serves image bytes directly (e.g.
+  // "https://img.ffffound.online"). Image URLs point here, not at the Worker,
+  // so the CDN caches the bytes and the Worker is never invoked per image.
+  IMAGES_BASE_URL: string;
   // AdSense — both must be set for the slot to render. Empty string = no ad.
   // Pulled in via wrangler.toml [vars] or `wrangler secret put`.
   ADSENSE_PUBLISHER_ID?: string;   // "ca-pub-XXXXXXXXXXXXXXXX"

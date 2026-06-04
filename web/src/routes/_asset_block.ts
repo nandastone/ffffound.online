@@ -1,5 +1,7 @@
+import type { Context } from "hono";
 import { html } from "hono/html";
-import type { ImageRow } from "../types";
+import type { Env, ImageRow } from "../types";
+import { imgUrl } from "./_url";
 
 interface RelatedThumb {
   image_id: string;
@@ -10,11 +12,11 @@ interface RelatedThumb {
 // Renders a single <blockquote class="asset"> block in the user-page / top-page
 // format: image on the left, vertical "vline" column of small related thumbs on
 // the right. The image-detail page uses its own (richer) markup in routes/image.ts.
-export function renderListAsset(row: ImageRow, relatedThumbs: RelatedThumb[] = []) {
+export function renderListAsset(c: Context<{ Bindings: Env }>, row: ImageRow, relatedThumbs: RelatedThumb[] = []) {
   const elId   = `asset${row.image_id.slice(0, 12)}`;
   const title  = row.title ?? row.image_id.slice(0, 12);
   const detail = `/image/${row.image_id}`;
-  const imgSrc = row.r2_key ? `/img/${row.r2_key}` : (row.cdn_thumbnail_url ?? "");
+  const imgSrc = row.r2_key ? imgUrl(c, row.r2_key) : (row.cdn_thumbnail_url ?? "");
   const desc   = sourceDescription(row.source_url);
   const date   = row.uploaded_at ? formatPosted(row.uploaded_at) : "";
   const w      = row.width ? Math.min(row.width, 480) : null;
@@ -35,7 +37,7 @@ ${row.r2_key
 <div class="button"><a class="link" style="text-decoration:line-through;">FLAG THIS IMAGE</a></div>
 </td>
 <td valign="top" class="${relatedThumbs.length ? "vline" : ""}">
-${relatedThumbs.filter((r) => r.r2_key).map((r) => html`<div class="related_to_item_xs"><a href="/image/${r.image_id}"><img src="/img/${r.r2_key}" width="100"></a></div>`)}
+${relatedThumbs.filter((r) => r.r2_key).map((r) => html`<div class="related_to_item_xs"><a href="/image/${r.image_id}"><img src="${imgUrl(c, r.r2_key!)}" width="100"></a></div>`)}
 </td>
 </tr></table>
 </div>

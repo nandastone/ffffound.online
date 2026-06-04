@@ -12,7 +12,6 @@ const PAGE_CHANGEFREQ = "yearly"; // immutable archive
 export function robotsRoute(c: Context<{ Bindings: Env }>) {
   const body = `User-agent: *
 Allow: /
-Disallow: /img/
 Disallow: /cdn/
 Disallow: /static/
 

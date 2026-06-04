@@ -2,7 +2,7 @@ import type { Context } from "hono";
 import { html } from "hono/html";
 import type { Env, ImageRow } from "../types";
 import { Layout } from "../layout";
-import { absUrl } from "./_url";
+import { absUrl, imgUrl } from "./_url";
 
 interface ThumbRow {
   image_id: string;
@@ -77,7 +77,7 @@ export async function imageRoute(c: Context<{ Bindings: Env }>) {
   const titleText = image.title ?? `image ${image.image_id.slice(0, 8)}`;
   const sourceUrl = image.source_url ?? "#";
   const detailHref = `/image/${image.image_id}`;
-  const imgSrc = image.r2_key ? `/img/${image.r2_key}` : (image.cdn_thumbnail_url ?? "");
+  const imgSrc = image.r2_key ? imgUrl(c, image.r2_key) : (image.cdn_thumbnail_url ?? "");
   const sourceHostPath = sourceUrlDescription(image.source_url);
   const postedDate = image.uploaded_at ? formatPostedAt(image.uploaded_at) : "";
 
@@ -103,14 +103,14 @@ export async function imageRoute(c: Context<{ Bindings: Env }>) {
         description,
         canonical: absUrl(c, detailHref),
         ogType: "article",
-        ogImage: image.r2_key ? absUrl(c, `/img/${image.r2_key}`) : undefined,
+        ogImage: image.r2_key ? imgUrl(c, image.r2_key) : undefined,
         noindex: isStub,
         jsonLd: {
           "@context": "https://schema.org",
           "@type": "ImageObject",
           "name": titleText,
           "description": description,
-          "contentUrl": image.r2_key ? absUrl(c, `/img/${image.r2_key}`) : undefined,
+          "contentUrl": image.r2_key ? imgUrl(c, image.r2_key) : undefined,
           "datePublished": image.uploaded_at ? new Date(image.uploaded_at * 1000).toISOString() : undefined,
           "url": absUrl(c, detailHref),
           "isPartOf": { "@type": "WebSite", "name": "FFFFOUND!", "url": absUrl(c, "/") },
@@ -168,7 +168,7 @@ ${savers.map((u, i) => html`<a href="/home/${u}/found">${u}</a>${i < savers.leng
 ${related.length
   ? html`<div class="related_to">
 <p class="related_to">You may like these images.</p>
-${related.map((r) => html`<div class="related_to_item"><table border="0" cellspacing="0" cellpadding="0"><tr><td width="170" height="170" align="center"><a href="/image/${r.image_id}"><img src="${r.r2_key ? `/img/${r.r2_key}` : r.cdn_thumbnail_url ?? ""}" alt=""></a></td></tr></table></div>`)}
+${related.map((r) => html`<div class="related_to_item"><table border="0" cellspacing="0" cellpadding="0"><tr><td width="170" height="170" align="center"><a href="/image/${r.image_id}"><img src="${r.r2_key ? imgUrl(c, r.r2_key) : (r.cdn_thumbnail_url ?? "")}" alt=""></a></td></tr></table></div>`)}
 <br clear="all">
 </div>`
   : ""}
@@ -178,7 +178,7 @@ ${latestByUser.size
 ${Array.from(latestByUser.entries()).map(([user, posts]) => html`
 <div class="more_images">
 <p><a href="/home/${user}/post">${user}'s</a> latest post.</p>
-${posts.map((p) => html`<div class="more_images_item"><table border="0" cellspacing="0" cellpadding="0"><tr><td width="100" height="100" align="center"><a href="/image/${p.image_id}"><img src="${p.r2_key ? `/img/${p.r2_key}` : p.cdn_thumbnail_url ?? ""}" alt="" width="100" height="100"></a></td></tr></table></div>`)}
+${posts.map((p) => html`<div class="more_images_item"><table border="0" cellspacing="0" cellpadding="0"><tr><td width="100" height="100" align="center"><a href="/image/${p.image_id}"><img src="${p.r2_key ? imgUrl(c, p.r2_key) : (p.cdn_thumbnail_url ?? "")}" alt="" width="100" height="100"></a></td></tr></table></div>`)}
 <br clear="all">
 </div>
 `)}

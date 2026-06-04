@@ -3,7 +3,6 @@ import type { Env } from "./types";
 import { homeRoute } from "./routes/home";
 import { imageRoute } from "./routes/image";
 import { userRoute } from "./routes/user";
-import { imgProxyRoute } from "./routes/img";
 import { cdnRoute } from "./routes/cdn";
 import { aboutRoute } from "./routes/about";
 import { legalRoute } from "./routes/legal";
@@ -34,7 +33,7 @@ app.use("*", async (c, next) => {
   const path = new URL(c.req.url).pathname;
   // Routes that set their own Cache-Control / use different cacheable bodies.
   const isHtmlRoute = !(
-    path.startsWith("/img/") || path.startsWith("/cdn/") ||
+    path.startsWith("/cdn/") ||
     path.startsWith("/sitemap") || path === "/robots.txt" ||
     path.startsWith("/static/") || path === "/favicon.ico"
   );
@@ -73,10 +72,6 @@ app.get("/home/:name/post", userRoute);
 app.get("/about", aboutRoute);
 app.get("/legal", legalRoute);
 app.get("/log", logRoute);
-
-// R2 image proxy. Worker reads from the IMAGES bucket and re-emits with
-// long Cache-Control so Cloudflare caches it at the edge.
-app.get("/img/:key{.+}", imgProxyRoute);
 
 // CDN compatibility shim — used to re-render captured original ffffound HTML
 // where image URLs follow ffffound's `<sha1>_<size>.<ext>` filename scheme.

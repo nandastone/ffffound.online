@@ -3,7 +3,7 @@ import { html } from "hono/html";
 import type { Env, UserRow, ImageRow } from "../types";
 import { Layout } from "../layout";
 import { renderListAsset } from "./_asset_block";
-import { absUrl } from "./_url";
+import { absUrl, imgUrl } from "./_url";
 
 const PAGE = 25;
 
@@ -55,7 +55,7 @@ export async function userRoute(c: Context<{ Bindings: Env }>) {
   `;
 
   const hero = results.find((r) => r.r2_key);
-  const ogImage = hero?.r2_key ? absUrl(c, `/img/${hero.r2_key}`) : undefined;
+  const ogImage = hero?.r2_key ? imgUrl(c, hero.r2_key) : undefined;
   const userPath = `/home/${username}`;
 
   return c.html(
@@ -86,7 +86,7 @@ export async function userRoute(c: Context<{ Bindings: Env }>) {
       },
       children: html`
 <div id="assets">
-${results.map((row) => renderListAsset(row, relatedBySource.get(row.image_id) ?? []))}
+${results.map((row) => renderListAsset(c, row, relatedBySource.get(row.image_id) ?? []))}
 </div>
 ${results.length === PAGE
   ? html`<div style="margin:40px 0;padding-left:20px"><a href="/home/${username}/found?offset=${offset + PAGE}">next →</a></div>`

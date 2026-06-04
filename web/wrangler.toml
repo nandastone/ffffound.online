@@ -23,6 +23,10 @@ bucket_name = "ffffound-images"
 [assets]
 directory = "./public"
 
-# Cache aggressively at the edge — every record is immutable.
+# Cache aggressively at the edge. Every record is immutable.
 [vars]
 CACHE_MAX_AGE = "31536000"
+# Image bytes are served directly from the R2 bucket via this custom domain,
+# bypassing the Worker entirely. Bind the bucket to this hostname in the
+# dashboard: R2 → ffffound-images → Settings → Custom Domains.
+IMAGES_BASE_URL = "https://img.ffffound.online"
