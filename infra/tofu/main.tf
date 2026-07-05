@@ -94,17 +94,26 @@ resource "cloudflare_bot_management" "this" {
 }
 
 # ---------------------------------------------------------------------------
-# Edge crawler block. meta-webindexer, AhrefsBot and SemrushBot walk the ~1.1M
-# /image/ pages and exhausted the Workers free-tier request cap, since every
-# uncached page render is one Worker invocation. This rule blocks them at the
-# edge, before the Worker runs, so they cost zero invocations. Search engines
-# (Googlebot, Bingbot) are deliberately absent from the list, so SEO is
-# unaffected. This resource owns the whole http_request_firewall_custom
-# entrypoint, so add future custom rules here, not in the dashboard.
+# Edge crawler block. Bulk crawlers walk the ~1.1M /image/ pages and exhaust
+# the Workers free-tier request cap, since every uncached page render is one
+# Worker invocation. This rule blocks them at the edge, before the Worker runs,
+# so they cost zero invocations. Search engines (Googlebot, Bingbot) are
+# deliberately absent, so SEO is unaffected. This resource owns the whole
+# http_request_firewall_custom entrypoint, so add future custom rules here, not
+# in the dashboard.
+#
+# The list grows as new indexers find the trap: meta-webindexer/Ahrefs/Semrush
+# (June 2026), then Claude-SearchBot/Amzn-SearchBot/BacklinksExtendedBot (July
+# 2026, ~98% of Worker load at the time). Match precise tokens: block
+# "claude-searchbot", NOT "claude-", so Claude-User (human-initiated fetches)
+# still gets through.
 # ---------------------------------------------------------------------------
 locals {
   # Bulk crawlers to block. Matched case-insensitively against the User-Agent.
-  blocked_crawler_uas = ["meta-webindexer", "ahrefsbot", "semrushbot"]
+  blocked_crawler_uas = [
+    "meta-webindexer", "ahrefsbot", "semrushbot",
+    "claude-searchbot", "amzn-searchbot", "backlinksextendedbot",
+  ]
 }
 
 resource "cloudflare_ruleset" "zone_custom_waf" {
