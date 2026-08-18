@@ -122,14 +122,29 @@ resource "cloudflare_ruleset" "zone_custom_waf" {
   kind    = "zone"
   phase   = "http_request_firewall_custom"
 
-  rules = [{
-    action      = "block"
-    description = "Block bulk crawlers exhausting the Workers free-tier cap. Search engines unaffected."
-    enabled     = true
-    expression = join(" or ", [
-      for ua in local.blocked_crawler_uas : "(lower(http.user_agent) contains \"${ua}\")"
-    ])
-  }]
+  rules = [
+    {
+      action      = "block"
+      description = "Block bulk crawlers exhausting the Workers free-tier cap. Search engines unaffected."
+      enabled     = true
+      expression = join(" or ", [
+        for ua in local.blocked_crawler_uas : "(lower(http.user_agent) contains \"${ua}\")"
+      ])
+    },
+
+    # An absent or empty User-Agent was 81,947 of ~128,000 apex requests in the
+    # 01:00-02:00 UTC hour on 2026-08-18, which is 64% of the load, all from a
+    # single address inside Cloudflare's own egress range (2a06:98c0::/29). No
+    # browser and no search crawler sends an empty User-Agent, so this is safe
+    # to block outright. The rate limiting rule never fired on it: the only 429s
+    # in that hour were the ten from the deployment test.
+    {
+      action      = "block"
+      description = "Block empty or absent User-Agent. 64% of apex load, August 2026."
+      enabled     = true
+      expression  = "(http.user_agent eq \"\")"
+    },
+  ]
 }
 
 # ---------------------------------------------------------------------------
