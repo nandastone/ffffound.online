@@ -2,6 +2,13 @@ name = "ffffound"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
+# The workers.dev hostname is disabled deliberately. It served the entire
+# archive at ffffound.<subdomain>.workers.dev, which sits outside the zone, so
+# no WAF rule, rate limiting rule or user-agent block could reach it. Every
+# guardrail in infra/tofu had an open bypass beside it until August 2026.
+# Leave this false. Wrangler defaults it to true when the key is absent.
+workers_dev = false
+
 # D1: metadata store. Create with:
 #   wrangler d1 create ffffound
 # then paste the returned database_id here.
